@@ -3,9 +3,10 @@
   const fmtDate=v=>v?new Date(v).toISOString().slice(0,10):'';
   const uid=()=>Math.random().toString(36).slice(2)+Date.now().toString(36);
   const debounce=(fn,ms=250)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
-  const state={tasks:[],filter:'all',query:''};
+  const state={tasks:[],filter:'all',query:'',sort:'byDueAsc'};
   const save=()=>localStorage.setItem(STORAGE_KEY,JSON.stringify(state.tasks));
   const load=()=>{try{state.tasks=JSON.parse(localStorage.getItem(STORAGE_KEY)||'[]')||[]}catch{state.tasks=[];}};
+  const normalizeOrder=()=>{state.tasks.sort((a,b)=>a.order-b.order||new Date(a.createdAt)-new Date(b.createdAt)).forEach((t,i)=>t.order=i); save();};
 
   (function addFavicon(){
     const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#7C3AED"/><path d="M18 34l8 8 20-20" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -18,11 +19,11 @@
 #app{max-width:980px;margin:28px auto;padding:0 16px 24px}
 .panel{background:#fff;border:1px solid var(--line);border-radius:10px}
 .add{display:grid;grid-template-columns:1fr 160px 120px;gap:8px;padding:10px 12px;margin-bottom:10px}
-.bar{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;padding:10px 12px;margin-bottom:10px}
+.bar{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;margin-bottom:10px}
 .chips{display:flex;gap:6px}
 .chip{padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:#475569;cursor:pointer}
 .chip.active{border-color:var(--accent);background:var(--accent-weak);color:var(--accent)}
-.field{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.field,.select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff}
 .list{padding:6px}
 ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
 li{display:grid;grid-template-columns:40px 1fr 160px 120px 110px;gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
@@ -47,10 +48,16 @@ li{display:grid;grid-template-columns:40px 1fr 160px 120px 110px;gap:8px;align-i
   const mkChip=(label,val)=>{const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=label; b.dataset.value=val; b.addEventListener('click',()=>{state.filter=val;render();}); return b;};
   const chipAll=mkChip('Все','all'), chipAct=mkChip('Активные','active'), chipDone=mkChip('Выполненные','completed');
   chips.append(chipAll,chipAct,chipDone);
+
   const searchWrap=document.createElement('div');
   const searchInput=Object.assign(document.createElement('input'),{className:'field',placeholder:'Поиск по названию…'});
   searchWrap.append(searchInput);
-  bar.append(chips, searchWrap);
+
+  const sortSelect=Object.assign(document.createElement('select'),{className:'select'});
+  [{value:'byDueAsc',label:'Сначала ближайшие'},{value:'byDueDesc',label:'Сначала дальние'},{value:'byCreatedDesc',label:'Сначала новые'}]
+    .forEach(o=>{const opt=document.createElement('option'); opt.value=o.value; opt.textContent=o.label; sortSelect.appendChild(opt);});
+
+  bar.append(chips, searchWrap, sortSelect);
 
   const list=document.createElement('section'); list.className='panel list';
   const ul=document.createElement('ul'); list.append(ul);
@@ -59,6 +66,8 @@ li{display:grid;grid-template-columns:40px 1fr 160px 120px 110px;gap:8px;align-i
 
   function render(){
     [...chips.children].forEach(c=>c.classList.toggle('active',c.dataset.value===state.filter));
+    sortSelect.value = state.sort;
+
     let items=[...state.tasks];
     if(state.filter==='active') items=items.filter(t=>!t.completed);
     if(state.filter==='completed') items=items.filter(t=>t.completed);
@@ -66,9 +75,30 @@ li{display:grid;grid-template-columns:40px 1fr 160px 120px 110px;gap:8px;align-i
     const q=(state.query||'').trim().toLowerCase();
     if(q) items=items.filter(t=>(t.title||'').toLowerCase().includes(q));
 
+    items.sort((a,b)=>{
+      if(state.sort==='byDueAsc'){
+        const ad=a.due||'', bd=b.due||'';
+        if(ad&&bd&&ad!==bd) return ad.localeCompare(bd);
+        if(ad&&!bd) return -1; if(!ad&&bd) return 1;
+        return a.order - b.order;
+      }
+      if(state.sort==='byDueDesc'){
+        const ad=a.due||'', bd=b.due||'';
+        if(ad&&bd&&ad!==bd) return bd.localeCompare(ad);
+        if(ad&&!bd) return -1; if(!ad&&bd) return 1;
+        return b.order - a.order;
+      }
+      return new Date(b.createdAt)-new Date(a.createdAt);
+    });
+
     while(ul.firstChild) ul.removeChild(ul.firstChild);
     items.forEach(task=>{
-      const li=document.createElement('li');
+      const li=document.createElement('li'); li.dataset.id=task.id; li.draggable=true;
+
+      li.addEventListener('dragstart', onDragStart);
+      li.addEventListener('dragend', onDragEnd);
+      li.addEventListener('dragover', onDragOver);
+      li.addEventListener('drop', onDrop);
 
       const c0=document.createElement('div');
       const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=task.completed;
@@ -80,19 +110,38 @@ li{display:grid;grid-template-columns:40px 1fr 160px 120px 110px;gap:8px;align-i
 
       const c2=document.createElement('div'); c2.textContent=task.due?fmtDate(task.due):'—';
 
-      const c3=document.createElement('div');
-      const badge=document.createElement('span'); badge.className='status'+(task.completed?' ok':''); badge.textContent=task.completed?'Готово':'В работе';
+      const c3=document.createElement('div'); const badge=document.createElement('span');
+      badge.className='status'+(task.completed?' ok':''); badge.textContent=task.completed?'Готово':'В работе';
       c3.append(badge);
 
       const c4=document.createElement('div');
       const bEdit=document.createElement('button'); bEdit.className='btn icon'; bEdit.title='Редактировать'; bEdit.append(document.createTextNode('✏️'));
       bEdit.addEventListener('click',()=>editTask(task.id));
       const bDel=document.createElement('button'); bDel.className='btn icon'; bDel.title='Удалить'; bDel.append(document.createTextNode('🗑️'));
-      bDel.addEventListener('click',()=>{ if(confirm('Удалить задачу?')){ state.tasks=state.tasks.filter(t=>t.id!==task.id); save(); render(); }});
+      bDel.addEventListener('click',()=>{ if(confirm('Удалить задачу?')){ state.tasks=state.tasks.filter(t=>t.id!==task.id); normalizeOrder(); render(); }});
       c4.append(bEdit,bDel);
 
       li.append(c0,c1,c2,c3,c4); ul.append(li);
     });
+  }
+
+  function onDragStart(e){ e.currentTarget.classList.add('dragging'); }
+  function onDragEnd(e){ e.currentTarget.classList.remove('dragging'); }
+  function onDragOver(e){
+    e.preventDefault();
+    const over=e.currentTarget;
+    const dragging=[...ul.children].find(x=>x.classList && x.classList.contains('dragging'));
+    if(!dragging || over===dragging) return;
+    const r=over.getBoundingClientRect();
+    const before=(e.clientY - r.top) < r.height/2;
+    ul.insertBefore(dragging, before?over:over.nextSibling);
+  }
+  function onDrop(){
+    [...ul.children].forEach((li,i)=>{
+      const t=state.tasks.find(x=>x.id===li.dataset.id);
+      if(t) t.order = i;
+    });
+    save(); render();
   }
 
   function editTask(id){
@@ -110,9 +159,10 @@ li{display:grid;grid-template-columns:40px 1fr 160px 120px 110px;gap:8px;align-i
     e.preventDefault();
     const title=titleInput.value.trim(); if(!title) return;
     state.tasks.push({id:uid(),title,due:dateInput.value||'',completed:false,createdAt:new Date().toISOString(),order:state.tasks.length});
-    save(); titleInput.value=''; dateInput.value=''; render();
+    normalizeOrder(); titleInput.value=''; dateInput.value=''; render();
   });
-  searchInput.addEventListener('input', debounce(()=>{ state.query = searchInput.value; render(); },200));
+  searchInput.addEventListener('input',debounce(()=>{state.query=searchInput.value;render();},200));
+  sortSelect.addEventListener('change',()=>{state.sort=sortSelect.value;render();});
 
-  load(); render();
+  load(); normalizeOrder(); render();
 })();
