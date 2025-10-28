@@ -63,9 +63,9 @@ li{display:grid;grid-template-columns:40px 1fr 160px 120px 110px;gap:8px;align-i
       c3.append(badge);
 
       const c4=document.createElement('div');
-      const bEdit=document.createElement('button'); bEdit.className='btn icon'; bEdit.title='Редактировать'; bEdit.append(document.createTextNode('✏️'));//TODO КАРТИНКУ
+      const bEdit=document.createElement('button'); bEdit.className='btn icon'; bEdit.title='Редактировать'; bEdit.append(document.createTextNode(''));//TODO КАРТИНКУ
       bEdit.addEventListener('click',()=>editTask(task.id));
-      const bDel=document.createElement('button'); bDel.className='btn icon'; bDel.title='Удалить'; bDel.append(document.createTextNode('🗑️'));//TODO КАРТИНКУ
+      const bDel=document.createElement('button'); bDel.className='btn icon'; bDel.title='Удалить'; bDel.append(document.createTextNode(''));//TODO КАРТИНКУ
       bDel.addEventListener('click',()=>{ if(confirm('Удалить задачу?')){ state.tasks=state.tasks.filter(t=>t.id!==task.id); save(); render(); }});
       c4.append(bEdit,bDel);
 
