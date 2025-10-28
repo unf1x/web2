@@ -84,14 +84,52 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
   .range .field{width:100%}
 }
 `;
+    style.textContent += `
+    .brand{ display:flex; align-items:center; gap:8px; }
+    .brand-logo{ width:24px; height:24px; border-radius:6px; display:block; }
+    `;
+
   document.head.appendChild(style);
+  function buildLogo(){
+    const ns='http://www.w3.org/2000/svg';
+    const svg=document.createElementNS(ns,'svg');
+    svg.setAttribute('viewBox','0 0 24 24');
+    svg.classList.add('brand-logo');
+
+    const rect=document.createElementNS(ns,'rect');
+    rect.setAttribute('x','0'); rect.setAttribute('y','0');
+    rect.setAttribute('width','24'); rect.setAttribute('height','24');
+    rect.setAttribute('rx','6'); rect.setAttribute('fill','var(--accent)');
+
+    const tick=document.createElementNS(ns,'path');
+    tick.setAttribute('d','M6 12l4 4 8-8');
+    tick.setAttribute('fill','none');
+    tick.setAttribute('stroke','#fff');
+    tick.setAttribute('stroke-width','2');
+    tick.setAttribute('stroke-linecap','round');
+    tick.setAttribute('stroke-linejoin','round');
+
+    svg.append(rect,tick);
+    return svg;
+  }
+
 
   const app = document.createElement('div'); app.id = 'app'; document.body.appendChild(app);
 
-  const header = document.createElement('header');
-  const h1 = document.createElement('h1'); h1.textContent = 'To-Do';
-  const count = document.createElement('div'); count.className = 'count'; count.textContent = '0 задач';
-  header.append(h1, count);
+    const header = document.createElement('header');
+
+    const brand = document.createElement('div');
+    brand.className = 'brand';
+    const h1 = document.createElement('h1');
+    h1.textContent = 'To-Do';
+    brand.append(buildLogo(), h1);
+
+    const count = document.createElement('div');
+    count.className = 'count';
+    count.textContent = '0 задач';
+
+    header.append(brand, count);
+
 
   const add = document.createElement('form'); add.className = 'panel add'; add.setAttribute('autocomplete','off');
   const titleInput = Object.assign(document.createElement('input'), { className:'field', placeholder:'Новая задача…', required:true });
