@@ -3,6 +3,21 @@
   const fmtDate = v => (v ? new Date(v).toISOString().slice(0, 10) : '');
   const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
   const debounce = (fn, ms = 250) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+    function el(tag, { className = '', attrs = {}, text = '', on = {} } = {}) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text) node.textContent = text;
+      for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+      for (const [event, handler] of Object.entries(on)) node.addEventListener(event, handler);
+      return node;
+    }
+
+    function createButton({ text = '', className = '', type = 'button', onClick } = {}) {
+      const btn = el('button', { className, text, attrs: { type } });
+      if (onClick) btn.addEventListener('click', onClick);
+      return btn;
+    }
+
   const state = { tasks: [], filter: 'all', sort: 'byDueAsc', query: '', dateFrom: '', dateTo: '' };
 
   const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
@@ -17,79 +32,6 @@
     save();
   };
 
-  (function addFavicon() {
-    const svg =
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-         <rect width="64" height="64" rx="12" fill="#7C3AED"/>
-         <path d="M18 34l8 8 20-20" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-       </svg>`;
-    const link = document.createElement('link');
-    link.rel = 'icon'; link.type = 'image/svg+xml';
-    link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
-    document.head.appendChild(link);
-  })();
-
-  const style = document.createElement('style');
-  style.textContent = `
-:root{
-  --bg:#F4F2F9; --panel:#FFFFFF; --ink:#0F172A; --muted:#475569; --line:#E3E0EF;
-  --accent:#7C3AED; --accent-weak:#F3E8FF; --ok:#16A34A; --danger:#B91C1C;
-}
-*{box-sizing:border-box}
-html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font:14px/1.45 ui-sans-serif,system-ui,Inter,Segoe UI,Roboto,Arial}
-#app{max-width:980px;margin:28px auto;padding:0 16px 24px}
-
-header{display:flex;justify-content:space-between;align-items:end;margin-bottom:12px}
-h1{margin:0;font-size:24px;font-weight:700}
-.count{color:var(--muted);font-size:12.5px}
-
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px}
-.add{display:grid;grid-template-columns:1fr 160px 120px;gap:8px;padding:10px 12px;margin-bottom:10px}
-.bar{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;margin-bottom:10px}
-.chips{display:flex;gap:6px}
-.chip{padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);cursor:pointer;transition:border-color .12s, background-color .12s, color .12s}
-.chip:hover{border-color:var(--accent)}
-.chip.active{border-color:var(--accent);background:var(--accent-weak);color:var(--accent)}
-
-.tools-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
-.field,.select{padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
-.range{display:flex;gap:6px;align-items:center}
-.range .field{width:140px}
-
-.btn{padding:9px 12px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
-.btn.ghost{background:#fff;color:var(--accent);border-color:var(--accent)}
-.btn.icon{padding:5px 8px;background:#fff;color:#0F172A;border:1px solid var(--line)}
-.btn.icon:hover{border-color:var(--accent)}
-.btn.icon.edit{ color: var(--accent); border-color: var(--accent); background: var(--accent-weak); }
-.btn.icon svg{ width:16px; height:16px; display:block; }
-
-.list{padding:6px}
-ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-li{display:grid;grid-template-columns:40px 1fr 160px 120px 110px;gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fff}
-li.dragging{outline:2px solid var(--accent);background:var(--accent-weak)}
-.title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.done{color:#98A2B3;text-decoration:line-through}
-
-input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
-
-.status{display:inline-block;padding:3px 8px;border:1px solid var(--line);border-radius:999px;background:#F5F6FA}
-.status.ok{background:#E9F8EE;border-color:#BFE8CF;color:#065F2B}
-
-.empty{padding:16px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px;background:#fff}
-
-@media(max-width:900px){ .bar{grid-template-columns:1fr} .tools-right{justify-content:stretch} }
-@media(max-width:720px){
-  .add{grid-template-columns:1fr 1fr}.add .btn{grid-column:span 2}
-  li{grid-template-columns:32px 1fr;grid-auto-rows:auto}
-  .range .field{width:100%}
-}
-`;
-    style.textContent += `
-    .brand{ display:flex; align-items:center; gap:8px; }
-    .brand-logo{ width:24px; height:24px; border-radius:6px; display:block; }
-    `;
-
-  document.head.appendChild(style);
   function buildLogo(){
     const ns='http://www.w3.org/2000/svg';
     const svg=document.createElementNS(ns,'svg');
@@ -134,12 +76,21 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
   const add = document.createElement('form'); add.className = 'panel add'; add.setAttribute('autocomplete','off');
   const titleInput = Object.assign(document.createElement('input'), { className:'field', placeholder:'Новая задача…', required:true });
   const dateInput  = Object.assign(document.createElement('input'), { className:'field', type:'date' });
-  const addBtn     = Object.assign(document.createElement('button'), { className:'btn', type:'submit' }); addBtn.textContent='Добавить';
+  const addBtn = createButton({ text: 'Добавить', className: 'btn', type: 'submit' });
   add.append(titleInput, dateInput, addBtn);
 
   const bar = document.createElement('section'); bar.className = 'panel bar';
   const chips = document.createElement('div'); chips.className = 'chips';
-  const mkChip = (label,val) => { const b=document.createElement('button'); b.type='button'; b.className='chip'; b.textContent=label; b.dataset.value=val; b.addEventListener('click',()=>{state.filter=val; render();}); return b; };
+  const mkChip = (label, val) => {
+    const b = createButton({
+      text: label,
+      className: 'chip',
+      onClick: () => { state.filter = val; render(); }
+    });
+    b.dataset.value = val;
+    return b;
+  };
+
   const chipAll = mkChip('Все','all'), chipAct = mkChip('Активные','active'), chipDone = mkChip('Выполненные','completed');
   chips.append(chipAll, chipAct, chipDone);
 
@@ -151,8 +102,15 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
   const fromInput = Object.assign(document.createElement('input'), { className:'field', type:'date' });
   const labTo = document.createElement('label'); labTo.textContent = 'По';
   const toInput = Object.assign(document.createElement('input'), { className:'field', type:'date' });
-  const clearRange = document.createElement('button'); clearRange.type='button'; clearRange.className='btn ghost'; clearRange.textContent='Сбросить даты';
-  clearRange.addEventListener('click',()=>{ fromInput.value=''; toInput.value=''; state.dateFrom=''; state.dateTo=''; render(); });
+  const clearRange = createButton({
+    text: 'Сбросить даты',
+    className: 'btn ghost',
+    onClick: () => {
+      fromInput.value=''; toInput.value='';
+      state.dateFrom=''; state.dateTo='';
+      render();
+    }
+  });
   range.append(labFrom, fromInput, labTo, toInput, clearRange);
 
   const sortSelect = Object.assign(document.createElement('select'), { className:'select' });
@@ -169,6 +127,100 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
   const ul = document.createElement('ul'); list.append(ul);
 
   app.append(header, add, bar, list);
+  function openModal({ title = '', bodyBuilder, onSubmit, submitText = 'Сохранить', cancelText = 'Отмена' }) {
+    const backdrop = el('div', { className: 'modal-backdrop' });
+    const modal = el('div', { className: 'modal', attrs: { role:'dialog','aria-modal':'true' } });
+
+    const h = document.createElement('header');
+    const h2 = el('h2', { text: title });
+    const xBtn = createButton({ text:'✕', className:'btn icon', onClick: close });
+    xBtn.setAttribute('aria-label','Закрыть');
+    h.append(h2, xBtn);
+
+    const body = el('div', { className:'body' });
+    const ctx = bodyBuilder(body);
+
+    const f = document.createElement('footer');
+    const cancel = createButton({ text: cancelText, className:'btn ghost', onClick: close });
+    const ok = createButton({ text: submitText, className:'btn', onClick: submit });
+    f.append(cancel, ok);
+
+    modal.append(h, body, f);
+    backdrop.append(modal);
+    document.body.append(backdrop);
+
+    function submit(){
+      if (onSubmit) {
+        const ok = onSubmit(ctx);
+        if (ok === false) return;
+      }
+      close();
+    }
+    function close(){ backdrop.remove(); }
+
+    backdrop.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); close(); }
+      if (e.key === 'Enter' && !(e.target instanceof HTMLTextAreaElement)) { e.preventDefault(); submit(); }
+    });
+    setTimeout(() => {
+      const first = body.querySelector('input,button,select,textarea');
+      (first || ok).focus();
+    }, 0);
+    return { close };
+  }
+
+  function openEditTask(taskId){
+    const t = state.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    openModal({
+      title: 'Редактирование задачи',
+      submitText: 'Сохранить',
+      bodyBuilder(container){
+        const row1 = el('div', { className:'row' });
+        const l1 = el('label', { text:'Название' });
+        const title = el('input', { className:'field', attrs:{ value: t.title || '', placeholder:'Название…' } });
+        row1.append(l1, title);
+
+        const row2 = el('div', { className:'row' });
+        const l2 = el('label', { text:'Дата (ГГГГ-ММ-ДД, опционально)' });
+        const date = el('input', { className:'field', attrs:{ type:'date', value: fmtDate(t.due) } });
+        const error = el('div', { className:'error', text:'' });
+        row2.append(l2, date, error);
+
+        container.append(row1, row2);
+        return { title, date, error };
+      },
+      onSubmit({ title, date, error }){
+        const newTitle = (title.value || '').trim();
+        const d = (date.value || '').trim();
+        if (!newTitle) { error.textContent = 'Название не может быть пустым.'; title.focus(); return false; }
+        if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) { error.textContent = 'Некорректная дата. Формат: ГГГГ-ММ-ДД.'; date.focus(); return false; }
+        t.title = newTitle; t.due = d || '';
+        save(); render();
+      }
+    });
+  }
+
+  function openDeleteConfirm(taskId){
+    const t = state.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    openModal({
+      title: 'Удаление задачи',
+      submitText: 'Удалить',
+      cancelText: 'Отмена',
+      bodyBuilder(container){
+        const row = el('div', { className:'row' });
+        row.append(el('div', { text:`Удалить «${t.title || 'без названия'}»?` }));
+        container.append(row);
+        return {};
+      },
+      onSubmit(){
+        state.tasks = state.tasks.filter(x => x.id !== taskId);
+        normalizeOrder(); render();
+      }
+    });
+  }
+
 
   const setCount = n => { count.textContent = `${n} задач`; };
 
@@ -237,7 +289,11 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
 
       const c4=document.createElement('div'); c4.className='actions';
 
-      const bEdit=document.createElement('button'); bEdit.className='btn icon edit'; bEdit.title='Редактировать';
+      const bEdit = createButton({
+        className: 'btn icon edit',
+        onClick: () => editTask(task.id)
+      });
+      bEdit.title = 'Редактировать';
       const svgNS='http://www.w3.org/2000/svg';
       const svg=document.createElementNS(svgNS,'svg');
       svg.setAttribute('viewBox','0 0 24 24');
@@ -248,12 +304,17 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
       svg.setAttribute('stroke-linejoin','round');
       const p1=document.createElementNS(svgNS,'path'); p1.setAttribute('d','M12 20h9');
       const p2=document.createElementNS(svgNS,'path'); p2.setAttribute('d','M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z');
-      svg.append(p1,p2); bEdit.append(svg);
-      bEdit.addEventListener('click',()=>editTask(task.id));
+      svg.append(p1,p2);
+      bEdit.append(svg);
 
-      const bDel=document.createElement('button'); bDel.className='btn icon'; bDel.title='Удалить';
+      const bDel = createButton({
+        className: 'btn icon',
+        onClick: () => openDeleteConfirm(task.id)
+      });
+      bDel.title = 'Удалить';
       bDel.append(document.createTextNode('🗑️'));
-      bDel.addEventListener('click',()=>{ if(confirm('Удалить задачу?')){ state.tasks = state.tasks.filter(t=>t.id!==task.id); normalizeOrder(); render(); }});
+
+
 
       c4.append(bEdit,bDel);
 
@@ -263,6 +324,7 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
 
   function onDragStart(e){ e.currentTarget.classList.add('dragging'); e.dataTransfer.effectAllowed='move'; }
   function onDragEnd(e){ e.currentTarget.classList.remove('dragging'); }
+
   function onDragOver(e){
     e.preventDefault();
     const over=e.currentTarget;
@@ -287,18 +349,7 @@ input[type="checkbox"]{ width:16px; height:16px; accent-color: var(--accent); }
     normalizeOrder(); titleInput.value=''; dateInput.value=''; render();
   });
 
-  function editTask(id){
-    const t=state.tasks.find(x=>x.id===id); if(!t) return;
-    const nt=prompt('Изменить название задачи:', t.title) ?? t.title;
-    let nd=t.due;
-    if(confirm('Изменить дату? «ОК» — ввести новую, «Отмена» — оставить как есть.')){
-      const d=prompt('Дата ГГГГ-ММ-ДД (пусто — без срока):', fmtDate(t.due));
-      if(d===''||/^\d{4}-\d{2}-\d{2}$/.test(d)) nd=d||''; else alert('Некорректная дата, оставляю прежнюю.');
-    }
-    t.title = String(nt).trim() || t.title;
-    t.due = nd;
-    save(); render();
-  }
+ function editTask(id){ openEditTask(id); }
 
   sortSelect.addEventListener('change', () => { state.sort = sortSelect.value; render(); });
   searchInput.addEventListener('input', debounce(() => { state.query = searchInput.value; render(); }, 200));
