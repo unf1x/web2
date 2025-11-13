@@ -18,7 +18,7 @@
       return btn;
     }
 
-  const state = { tasks: [], filter: 'all', sort: 'byDueAsc', query: '', dateFrom: '', dateTo: '' };
+  const state = { tasks: [], filter: 'all', sort: 'byOrder', query: '', dateFrom: '', dateTo: '' };
 
   const save = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state.tasks));
   const load = () => {
@@ -114,7 +114,8 @@
   range.append(labFrom, fromInput, labTo, toInput, clearRange);
 
   const sortSelect = Object.assign(document.createElement('select'), { className:'select' });
-  [{value:'byDueAsc',label:'Сначала ближайшие'},
+  [{value:'byOrder',label:'Вручную'},
+   {value:'byDueAsc',label:'Сначала ближайшие'},
    {value:'byDueDesc',label:'Сначала дальние'},
    {value:'byCreatedDesc',label:'Сначала новые'}]
     .forEach(o=>{ const opt=document.createElement('option'); opt.value=o.value; opt.textContent=o.label; sortSelect.appendChild(opt); });
@@ -241,13 +242,16 @@
     if(q) items = items.filter(t => (t.title||'').toLowerCase().includes(q) || (t.due && fmtDate(t.due).includes(q)));
 
     items.sort((a,b)=>{
-      if(state.sort==='byDueAsc'){
+      if (state.sort === 'byOrder') {
+        return a.order - b.order;
+      }
+      if (state.sort === 'byDueAsc') {
         const ad=a.due||'', bd=b.due||'';
         if(ad&&bd&&ad!==bd) return ad.localeCompare(bd);
         if(ad&&!bd) return -1; if(!ad&&bd) return 1;
         return a.order - b.order;
       }
-      if(state.sort==='byDueDesc'){
+      if (state.sort === 'byDueDesc') {
         const ad=a.due||'', bd=b.due||'';
         if(ad&&bd&&ad!==bd) return bd.localeCompare(ad);
         if(ad&&!bd) return -1; if(!ad&&bd) return 1;
@@ -339,7 +343,9 @@
       const t=state.tasks.find(x=>x.id===li.dataset.id);
       if(t) t.order=i;
     });
-    save(); render();
+    save();
+    state.sort = 'byOrder';
+    render();
   }
 
   add.addEventListener('submit', e => {
